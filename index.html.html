@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Biblioteca Virtual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #16255c;
+    }
+    h1 {
+      color: #ffffff;
+      margin-bottom: 14px;
+      font-family: 'Great Vibes', cursive;
+      font-size: 3rem;
+      font-weight: normal;
+    }
+    h2 {
+      color: #1565c0;
+      font-family: 'Great Vibes', cursive;
+      font-size: 1.7rem;
+      font-weight: normal;
+    }
+    section {
+      background: #fff;
+      padding: 12px 15px;
+      margin-bottom: 16px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px #cfe0f5;
+      border: 1px solid #d6e4f7;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+      color: #1a3a5c;
+    }
+    input, select, textarea, button {
+      margin-top: 5px;
+      padding: 6px 8px;
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #90a9c9;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      font-size: 0.9rem;
+    }
+    button {
+      background-color: #1565c0;
+      color: white;
+      cursor: pointer;
+      border: none;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #0d47a1;
+    }
+    button:disabled {
+      background-color: #9db8db;
+      cursor: not-allowed;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    ul li {
+      background: #e3edfb;
+      margin-bottom: 5px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .note-badge {
+      background: #d3e3f7;
+      color: #0d47a1;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 0.8rem;
+      border: 1px solid #90a9c9;
+    }
+    .vazio {
+      font-style: italic;
+      color: #5c7ca3;
+    }
+    .acoes {
+      display: flex;
+      gap: 5px;
+    }
+    .acoes button {
+      width: auto;
+      padding: 4px 10px;
+      margin-top: 0;
+      font-size: 0.78rem;
+      border-radius: 999px;
+    }
+    .btn-secundario {
+      background: #fff;
+      color: #1565c0;
+      border: 1px solid #1565c0;
+    }
+    .btn-secundario:hover {
+      background: #1565c0;
+      color: #fff;
+    }
+    .btn-perigo {
+      background: #fff;
+      color: #b71c1c;
+      border: 1px solid #b71c1c;
+    }
+    .btn-perigo:hover {
+      background: #b71c1c;
+      color: #fff;
+    }
+    .btn-confirmar {
+      background: #fff;
+      color: #1b5e20;
+      border: 1px solid #1b5e20;
+    }
+    .btn-confirmar:hover {
+      background: #1b5e20;
+      color: #fff;
+    }
+    #loadingMsg {
+      color: #ffffff;
+      font-style: italic;
+    }
+
+    /* Navegação em abas */
+    .abas {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+      flex-wrap: wrap;
+    }
+    .aba-btn {
+      width: auto;
+      background: none;
+      color: #dce8ff;
+      border: none;
+      border-radius: 4px 4px 0 0;
+      padding: 10px 16px;
+      font-weight: bold;
+      margin-top: 0;
+      border-bottom: 3px solid transparent;
+    }
+    .aba-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+    .aba-btn.ativa {
+      color: #ffffff;
+      border-bottom: 3px solid #ffffff;
+    }
+    .conteudo-aba {
+      display: none;
+    }
+    .conteudo-aba.ativa {
+      display: block;
+    }
+
+    /* Ícone no canto: dá acesso à área do administrador */
+    #trigger {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #0d47a1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(13, 71, 161, 0.4);
+      z-index: 50;
+    }
+    #trigger svg {
+      width: 16px;
+      height: 16px;
+      fill: #ffffff;
+    }
+    #painelAdmin, #loginPanel {
+      display: none;
+    }
+    #loginPanel {
+      max-width: 320px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Biblioteca Virtual</h1>
+  <p id="loadingMsg">Carregando dados salvos...</p>
+
+  <!-- Ícone de contato/administrador escondido no canto -->
+  <div id="trigger" title="Área do administrador">
+    <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.5c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/></svg>
+  </div>
+
+  <section id="loginPanel">
+    <h2>Login do Administrador</h2>
+    <form id="loginForm">
+      <label for="adminPassword">Senha:</label>
+      <input type="password" id="adminPassword" required />
+      <button type="submit">Entrar</button>
+    </form>
+    <p id="loginFeedback"></p>
+  </section>
+
+  <section id="painelAdmin">
+    <h2>Adicionar Livro</h2>
+    <form id="addBookForm">
+      <label for="newBookTitle">Título do Livro:</label>
+      <input type="text" id="newBookTitle" required />
+      <button type="submit">Adicionar Livro</button>
+    </form>
+
+    <h2 style="margin-top:18px;">Dar Nota a um Livro</h2>
+    <form id="noteForm">
+      <label for="noteBookSelect">Escolha o livro:</label>
+      <select id="noteBookSelect" required></select>
+
+      <label for="noteValue">Nota (0 a 10):</label>
+      <input type="number" id="noteValue" min="0" max="10" step="1" required />
+
+      <button type="submit">Salvar Nota</button>
+    </form>
+    <p id="noteFeedback"></p>
+  </section>
+
+  <!-- Navegação principal: cada seção agora tem sua própria aba -->
+  <div class="abas">
+    <button type="button" class="aba-btn ativa" id="abaInicioBtn">Início</button>
+    <button type="button" class="aba-btn" id="abaAgendarBtn">Agendar</button>
+    <button type="button" class="aba-btn" id="abaLendoBtn">Lendo</button>
+    <button type="button" class="aba-btn" id="abaNotasBtn">Avaliações</button>
+    <button type="button" class="aba-btn" id="abaContatoBtn">Contato</button>
+  </div>
+
+  <div id="abaInicio" class="conteudo-aba ativa">
+    <section>
+      <h2>Livros Disponíveis para Leitura</h2>
+      <ul id="availableBooksList"></ul>
+    </section>
+  </div>
+
+  <div id="abaAgendar" class="conteudo-aba">
+    <section>
+      <h2>Agendar Livro para Leitura</h2>
+      <form id="scheduleForm">
+        <label for="bookSelect">Escolha um livro disponível:</label>
+        <select id="bookSelect" required></select>
+
+        <label for="userName">Seu nome:</label>
+        <input type="text" id="userName" required />
+
+        <button type="submit">Agendar Leitura</button>
+      </form>
+      <p id="scheduleFeedback"></p>
+    </section>
+  </div>
+
+  <div id="abaLendo" class="conteudo-aba">
+    <section>
+      <h2>Livros Sendo Lidos</h2>
+      <ul id="readingBooksList"></ul>
+    </section>
+  </div>
+
+  <div id="abaNotas" class="conteudo-aba">
+    <section>
+      <h2>Livros Lidos e Notas</h2>
+      <ul id="readBooksList"></ul>
+    </section>
+  </div>
+
+  <div id="abaContato" class="conteudo-aba">
+    <section>
+      <h2>Contato com o Dono da Biblioteca</h2>
+      <form id="contactForm">
+        <label for="contactName">Nome:</label>
+        <input type="text" id="contactName" required />
+
+        <label for="contactEmail">Email:</label>
+        <input type="email" id="contactEmail" required />
+
+        <label for="contactMessage">Mensagem:</label>
+        <textarea id="contactMessage" rows="4" required></textarea>
+
+        <button type="submit" id="contactSubmitBtn">Enviar Mensagem</button>
+      </form>
+      <p id="contactFeedback"></p>
+    </section>
+  </div>
+
+<script>
+  // A senha não fica em texto puro no código — guardamos só o hash SHA-256 dela.
+  // Aviso importante: isso NÃO é segurança real, porque tudo roda no navegador do
+  // usuário. Alguém disposto a tentar senhas offline contra esse hash ainda pode
+  // descobrir "admin123". Pra proteção de verdade, seria preciso um servidor
+  // validando o login (fora do que dá pra fazer só com HTML/JS no cliente).
+  const ADMIN_PASSWORD_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+  const STORAGE_KEY = "biblioteca-books";
+  let isAdminLoggedIn = false;
+
+  async function hashText(text) {
+    const data = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  // Credenciais do EmailJS (usadas no formulário de contato)
+  const EMAILJS_PUBLIC_KEY = "_9nbVoub4jzy9q5Vn";
+  const EMAILJS_SERVICE_ID = "service_nq1njcg";
+  const EMAILJS_TEMPLATE_ID = "template_nn3n09j";
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+  // Sem livros de exemplo — a biblioteca começa vazia e só tem o que for
+  // adicionado pelo administrador. Tudo o que for salvo aqui persiste
+  // entre acessos, pois fica gravado no localStorage deste navegador.
+  const defaultBooks = [];
+
+  let books = [];
+
+  // ---- Abas ----
+  document.getElementById("abaInicioBtn").addEventListener("click", () => trocarAba("abaInicio", "abaInicioBtn"));
+  document.getElementById("abaAgendarBtn").addEventListener("click", () => trocarAba("abaAgendar", "abaAgendarBtn"));
+  document.getElementById("abaLendoBtn").addEventListener("click", () => trocarAba("abaLendo", "abaLendoBtn"));
+  document.getElementById("abaNotasBtn").addEventListener("click", () => trocarAba("abaNotas", "abaNotasBtn"));
+  document.getElementById("abaContatoBtn").addEventListener("click", () => trocarAba("abaContato", "abaContatoBtn"));
+
+  function trocarAba(idConteudo, idBotao) {
+    document.querySelectorAll(".conteudo-aba").forEach(el => el.classList.remove("ativa"));
+    document.querySelectorAll(".aba-btn").forEach(el => el.classList.remove("ativa"));
+    document.getElementById(idConteudo).classList.add("ativa");
+    document.getElementById(idBotao).classList.add("ativa");
+  }
+
+  // ---- Persistência (JSONBin.io - banco de dados na internet) ----
+  // Os dados ficam salvos num "bin" no JSONBin.io, então funcionam de
+  // qualquer navegador ou computador que abrir este arquivo.
+  // Aviso: como isso roda 100% no navegador (sem servidor próprio), a
+  // chave abaixo fica visível pra quem inspecionar o código-fonte da
+  // página. Para um projeto pessoal/entre amigos tudo bem, mas não é
+  // recomendado para dados sensíveis.
+  const JSONBIN_BIN_ID = "6a7d21d7f5f4af5e290ed271";
+  const JSONBIN_MASTER_KEY = "$2a$10$31/POkHbZwICjUCaKtK4hOgEdLQX4K0WlN1ucKJW0dyhObnaBRWFe";
+  const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+  async function loadBooks() {
+    try {
+      const response = await fetch(`${JSONBIN_URL}/latest`, {
+        headers: { "X-Master-Key": JSONBIN_MASTER_KEY }
+      });
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+      const data = await response.json();
+      books = (data.record && Array.isArray(data.record.books)) ? data.record.books : [];
+    } catch (err) {
+      console.error("Erro ao carregar dados do JSONBin:", err);
+      books = defaultBooks;
+      document.getElementById("loadingMsg").textContent =
+        "Não foi possível carregar os dados salvos. Verifique sua conexão com a internet.";
+      document.getElementById("loadingMsg").style.color = "#ffb3b3";
+      renderLists();
+      return;
+    }
+    document.getElementById("loadingMsg").style.display = "none";
+    renderLists();
+  }
+
+  async function saveBooks() {
+    try {
+      const response = await fetch(JSONBIN_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": JSONBIN_MASTER_KEY
+        },
+        body: JSON.stringify({ books })
+      });
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+    } catch (err) {
+      console.error("Erro ao salvar dados no JSONBin:", err);
+      alert("Não foi possível salvar os dados agora. Verifique sua conexão com a internet e tente novamente.");
+    }
+  }
+
+  function renderLists() {
+    const readList = document.getElementById("readBooksList");
+    const availableList = document.getElementById("availableBooksList");
+    const readingList = document.getElementById("readingBooksList");
+    const bookSelect = document.getElementById("bookSelect");
+    const noteBookSelect = document.getElementById("noteBookSelect");
+
+    readList.innerHTML = "";
+    availableList.innerHTML = "";
+    readingList.innerHTML = "";
+    bookSelect.innerHTML = "";
+    noteBookSelect.innerHTML = "";
+
+    const lidos = books.filter(b => b.status === "read");
+    const disponiveis = books.filter(b => b.status === "available");
+    const lendo = books.filter(b => b.status === "reading");
+
+    if (lidos.length === 0) readList.innerHTML = '<li class="vazio">Nenhum livro avaliado ainda.</li>';
+    lidos.forEach(book => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = book.title;
+      const badge = document.createElement("span");
+      badge.className = "note-badge";
+      badge.textContent = `Nota: ${book.note}/10`;
+      li.appendChild(span);
+      li.appendChild(badge);
+      readList.appendChild(li);
+    });
+
+    if (disponiveis.length === 0) availableList.innerHTML = '<li class="vazio">Nenhum livro disponível no momento.</li>';
+    disponiveis.forEach(book => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = book.title;
+      li.appendChild(span);
+
+      const acoes = document.createElement("div");
+      acoes.className = "acoes";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn-secundario";
+      editBtn.textContent = "Editar";
+      editBtn.onclick = () => editarLivro(book.id);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn-perigo";
+      delBtn.textContent = "Remover";
+      delBtn.onclick = () => removerLivro(book.id);
+
+      acoes.appendChild(editBtn);
+      acoes.appendChild(delBtn);
+      li.appendChild(acoes);
+      availableList.appendChild(li);
+
+      const option = document.createElement("option");
+      option.value = book.id;
+      option.textContent = book.title;
+      bookSelect.appendChild(option);
+    });
+
+    if (bookSelect.options.length === 0) {
+      const option = document.createElement("option");
+      option.textContent = "Nenhum livro disponível";
+      option.disabled = true;
+      bookSelect.appendChild(option);
+    }
+
+    if (lendo.length === 0) readingList.innerHTML = '<li class="vazio">Ninguém está lendo nenhum livro agora.</li>';
+    lendo.forEach(book => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = `${book.title} (Lendo: ${book.reader})`;
+      li.appendChild(span);
+
+      const concluirBtn = document.createElement("button");
+      concluirBtn.className = "btn-confirmar";
+      concluirBtn.textContent = "Concluir Leitura";
+      concluirBtn.onclick = () => concluirLeitura(book.id);
+
+      const acoes = document.createElement("div");
+      acoes.className = "acoes";
+      acoes.appendChild(concluirBtn);
+      li.appendChild(acoes);
+      readingList.appendChild(li);
+    });
+
+    // Select do painel de notas: mostra todos os livros
+    books.forEach(book => {
+      const option = document.createElement("option");
+      option.value = book.id;
+      option.textContent = book.title;
+      noteBookSelect.appendChild(option);
+    });
+  }
+
+  async function editarLivro(id) {
+    const book = books.find(b => b.id === id);
+    if (!book) return;
+    const novoTitulo = prompt("Novo título do livro:", book.title);
+    if (novoTitulo && novoTitulo.trim()) {
+      book.title = novoTitulo.trim();
+      await saveBooks();
+      renderLists();
+    }
+  }
+
+  async function removerLivro(id) {
+    const book = books.find(b => b.id === id);
+    if (!book) return;
+    if (confirm(`Remover "${book.title}" da biblioteca?`)) {
+      books = books.filter(b => b.id !== id);
+      await saveBooks();
+      renderLists();
+    }
+  }
+
+  async function concluirLeitura(id) {
+    const book = books.find(b => b.id === id);
+    if (!book) return;
+    book.status = "available";
+    delete book.reader;
+    await saveBooks();
+    renderLists();
+  }
+
+  // Ícone escondido que abre a área do administrador
+  document.getElementById("trigger").addEventListener("click", () => {
+    if (isAdminLoggedIn) {
+      const painel = document.getElementById("painelAdmin");
+      painel.style.display = painel.style.display === "block" ? "none" : "block";
+    } else {
+      const login = document.getElementById("loginPanel");
+      login.style.display = login.style.display === "block" ? "none" : "block";
+    }
+  });
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const inputPassword = document.getElementById("adminPassword").value;
+    const feedback = document.getElementById("loginFeedback");
+    const inputHash = await hashText(inputPassword);
+
+    if (inputHash === ADMIN_PASSWORD_HASH) {
+      isAdminLoggedIn = true;
+      document.getElementById("painelAdmin").style.display = "block";
+      document.getElementById("loginPanel").style.display = "none";
+      feedback.textContent = "";
+    } else {
+      feedback.textContent = "Senha incorreta. Tente novamente.";
+    }
+  });
+
+  document.getElementById("addBookForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!isAdminLoggedIn) { alert("Somente o administrador pode adicionar livros."); return; }
+    const newTitle = document.getElementById("newBookTitle").value.trim();
+    if (newTitle) {
+      const newId = books.length ? Math.max(...books.map(b => b.id)) + 1 : 1;
+      books.push({ id: newId, title: newTitle, status: "available" });
+      await saveBooks();
+      alert(`Livro "${newTitle}" adicionado com sucesso.`);
+      renderLists();
+      e.target.reset();
+    }
+  });
+
+  document.getElementById("noteForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!isAdminLoggedIn) { alert("Somente o administrador pode dar notas."); return; }
+    const bookId = parseInt(document.getElementById("noteBookSelect").value);
+    const nota = parseInt(document.getElementById("noteValue").value);
+    const book = books.find(b => b.id === bookId);
+    const feedback = document.getElementById("noteFeedback");
+    if (book && nota >= 0 && nota <= 10) {
+      book.status = "read";
+      book.note = nota;
+      delete book.reader;
+      await saveBooks();
+      renderLists();
+      e.target.reset();
+      feedback.style.color = "#1565c0";
+      feedback.textContent = `Nota ${nota}/10 salva para "${book.title}".`;
+    }
+  });
+
+  document.getElementById("scheduleForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const selectedBookId = parseInt(document.getElementById("bookSelect").value);
+    const userName = document.getElementById("userName").value.trim();
+    const feedback = document.getElementById("scheduleFeedback");
+    const book = books.find(b => b.id === selectedBookId);
+
+    if (book && userName) {
+      book.status = "reading";
+      book.reader = userName;
+      await saveBooks();
+      renderLists();
+      e.target.reset();
+      feedback.style.color = "#1565c0";
+      feedback.textContent = `Livro "${book.title}" agendado para ${userName} com sucesso.`;
+    } else {
+      feedback.style.color = "#b71c1c";
+      feedback.textContent = "Selecione um livro e informe seu nome.";
+    }
+  });
+
+  // Contato: envio via EmailJS com diagnóstico de erro mais claro
+  document.getElementById("contactForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("contactName").value.trim();
+    const email = document.getElementById("contactEmail").value.trim();
+    const message = document.getElementById("contactMessage").value.trim();
+    const feedback = document.getElementById("contactFeedback");
+    const submitBtn = document.getElementById("contactSubmitBtn");
+
+    if (!(name && email && message)) {
+      feedback.style.color = "#b71c1c";
+      feedback.textContent = "Por favor, preencha todos os campos.";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Enviando...";
+    feedback.style.color = "#3a6ea8";
+    feedback.textContent = "Enviando sua mensagem...";
+
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name: name,
+          from_email: email,
+          reply_to: email,
+          message: message
+        },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      feedback.style.color = "#1b5e20";
+      feedback.textContent = "Mensagem enviada com sucesso! Obrigado por entrar em contato.";
+      e.target.reset();
+    } catch (err) {
+      console.error("Erro ao enviar email:", err);
+      const detalhe = (err && (err.text || err.message)) ? ` (${err.text || err.message})` : "";
+      feedback.style.color = "#b71c1c";
+      feedback.textContent = `Não foi possível enviar a mensagem agora${detalhe}. Tente novamente em instantes.`;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Enviar Mensagem";
+    }
+  });
+
+  loadBooks();
+</script>
+</body></html>
