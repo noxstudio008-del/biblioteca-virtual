@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -364,11 +364,6 @@
   </div>
 
 <script>
-  // A senha não fica em texto puro no código — guardamos só o hash SHA-256 dela.
-  // Aviso importante: isso NÃO é segurança real, porque tudo roda no navegador do
-  // usuário. Alguém disposto a tentar senhas offline contra esse hash ainda pode
-  // descobrir a senha original. Pra proteção de verdade, seria preciso um servidor
-  // validando o login (fora do que dá pra fazer só com HTML/JS no cliente).
   const ADMIN_PASSWORD_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
   let isAdminLoggedIn = false;
 
