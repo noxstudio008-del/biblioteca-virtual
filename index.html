@@ -291,6 +291,13 @@
     <div id="libraryEmailsForm"></div>
     <button type="button" id="saveEmailsBtn" style="margin-top:10px;">Salvar Emails</button>
     <p id="emailsFeedback"></p>
+
+    <h2 style="margin-top:18px;">Limite de Livros por Leitor</h2>
+    <p style="color:#5c7ca3; font-size:0.85rem; margin-top:-6px;">Quantos livros a mesma pessoa pode ter emprestados ao mesmo tempo. Padrão: 1.</p>
+    <label for="bookLimitInput" style="margin-top:0;">Limite:</label>
+    <input type="number" id="bookLimitInput" min="1" step="1" />
+    <button type="button" id="saveLimitBtn" style="margin-top:10px;">Salvar Limite</button>
+    <p id="limitFeedback"></p>
   </section>
 
   <!-- Navegação principal -->
@@ -298,14 +305,17 @@
     <button type="button" class="aba-btn ativa" id="abaInicioBtn">Início</button>
     <button type="button" class="aba-btn" id="abaAgendarBtn">Agendar</button>
     <button type="button" class="aba-btn" id="abaLendoBtn">Emprestados</button>
-    <button type="button" class="aba-btn" id="abaAtrasadosBtn">Atrasados</button>
+    <button type="button" class="aba-btn" id="abaAtrasadosBtn" style="display:none;">Atrasados</button>
     <button type="button" class="aba-btn" id="abaContatoBtn">Contato</button>
   </div>
 
   <div id="abaInicio" class="conteudo-aba ativa">
     <section>
       <h2>Livros Disponíveis para Leitura</h2>
-      <label for="filtroGenero" style="margin-top:0;">Filtrar por gênero:</label>
+      <label for="buscaTitulo" style="margin-top:0;">Buscar por título:</label>
+      <input type="text" id="buscaTitulo" placeholder="Digite o nome do livro..." />
+
+      <label for="filtroGenero">Filtrar por gênero:</label>
       <select id="filtroGenero" class="filtro-genero"></select>
       <div id="availableBooksContainer" style="margin-top:12px;"></div>
     </section>
@@ -364,7 +374,12 @@
   </div>
 
 <script>
-  const ADMIN_PASSWORD_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+  // A senha não fica em texto puro no código — guardamos só o hash SHA-256 dela.
+  // Aviso importante: isso NÃO é segurança real, porque tudo roda no navegador do
+  // usuário. Alguém disposto a tentar senhas offline contra esse hash ainda pode
+  // descobrir a senha original. Pra proteção de verdade, seria preciso um servidor
+  // validando o login (fora do que dá pra fazer só com HTML/JS no cliente).
+  const ADMIN_PASSWORD_HASH = "31756be9e088f88f6be86a9dd50590b6b0fddd357a7ba8d18f673adc340b7314";
   let isAdminLoggedIn = false;
 
   async function hashText(text) {
@@ -400,6 +415,7 @@
 
   let books = [];
   let libraryEmails = DEFAULT_LIBRARY_EMAILS.slice();
+  let bookLimit = 1;
 
   async function loadData() {
     try {
@@ -412,6 +428,9 @@
       libraryEmails = (data.record && Array.isArray(data.record.libraryEmails) && data.record.libraryEmails.length)
         ? data.record.libraryEmails
         : DEFAULT_LIBRARY_EMAILS.slice();
+      bookLimit = (data.record && typeof data.record.bookLimit === "number" && data.record.bookLimit >= 1)
+        ? data.record.bookLimit
+        : 1;
     } catch (err) {
       console.error("Erro ao carregar dados do JSONBin:", err);
       books = [];
@@ -434,7 +453,7 @@
           "Content-Type": "application/json",
           "X-Master-Key": JSONBIN_MASTER_KEY
         },
-        body: JSON.stringify({ books, libraryEmails })
+        body: JSON.stringify({ books, libraryEmails, bookLimit })
       });
       if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
     } catch (err) {
@@ -448,6 +467,7 @@
     renderLists();
     renderLibraryEmailsForm();
     renderContactRecipients();
+    document.getElementById("bookLimitInput").value = bookLimit;
   }
 
   // ---- Abas ----
@@ -513,12 +533,17 @@
   function renderDisponiveis() {
     const container = document.getElementById("availableBooksContainer");
     const filtro = document.getElementById("filtroGenero").value || "Todos";
+    const busca = document.getElementById("buscaTitulo").value.trim().toLowerCase();
     container.innerHTML = "";
 
-    const disponiveis = books.filter(b => b.status === "available" && (filtro === "Todos" || b.genero === filtro));
+    const disponiveis = books.filter(b =>
+      b.status === "available" &&
+      (filtro === "Todos" || b.genero === filtro) &&
+      (busca === "" || b.title.toLowerCase().includes(busca))
+    );
 
     if (disponiveis.length === 0) {
-      container.innerHTML = '<p class="vazio">Nenhum livro disponível nesse filtro no momento.</p>';
+      container.innerHTML = '<p class="vazio">Nenhum livro disponível nesse filtro/busca no momento.</p>';
       return;
     }
 
@@ -628,11 +653,13 @@
         acoes.appendChild(saveDateBtn);
       }
 
-      const concluirBtn = document.createElement("button");
-      concluirBtn.className = "btn-confirmar";
-      concluirBtn.textContent = "Registrar Devolução";
-      concluirBtn.onclick = () => concluirLeitura(book.id);
-      acoes.appendChild(concluirBtn);
+      if (isAdminLoggedIn) {
+        const concluirBtn = document.createElement("button");
+        concluirBtn.className = "btn-confirmar";
+        concluirBtn.textContent = "Registrar Devolução";
+        concluirBtn.onclick = () => concluirLeitura(book.id);
+        acoes.appendChild(concluirBtn);
+      }
 
       li.appendChild(acoes);
       readingList.appendChild(li);
@@ -730,6 +757,7 @@
   }
 
   async function concluirLeitura(id) {
+    if (!isAdminLoggedIn) { alert("Somente a bibliotecária pode registrar devoluções."); return; }
     const book = books.find(b => b.id === id);
     if (!book) return;
     book.status = "available";
@@ -740,6 +768,7 @@
   }
 
   async function salvarDataEntrega(id, novaData) {
+    if (!isAdminLoggedIn) { alert("Somente a bibliotecária pode alterar a data de entrega."); return; }
     const book = books.find(b => b.id === id);
     if (!book) return;
     if (!novaData) { alert("Escolha uma data válida."); return; }
@@ -747,8 +776,6 @@
     await saveData();
     renderLists();
   }
-
-  // Ícone escondido que abre a área da bibliotecária
   document.getElementById("trigger").addEventListener("click", () => {
     if (isAdminLoggedIn) {
       const painel = document.getElementById("painelAdmin");
@@ -769,6 +796,7 @@
       isAdminLoggedIn = true;
       document.getElementById("painelAdmin").style.display = "block";
       document.getElementById("loginPanel").style.display = "none";
+      document.getElementById("abaAtrasadosBtn").style.display = "";
       feedback.textContent = "";
       renderLists();
     } else {
@@ -808,6 +836,21 @@
     feedback.textContent = "Emails atualizados com sucesso.";
   });
 
+  document.getElementById("saveLimitBtn").addEventListener("click", async () => {
+    if (!isAdminLoggedIn) { alert("Somente a bibliotecária pode editar o limite."); return; }
+    const novoLimite = parseInt(document.getElementById("bookLimitInput").value);
+    const feedback = document.getElementById("limitFeedback");
+    if (!novoLimite || novoLimite < 1) {
+      feedback.style.color = "#b71c1c";
+      feedback.textContent = "Informe um número válido (mínimo 1).";
+      return;
+    }
+    bookLimit = novoLimite;
+    await saveData();
+    feedback.style.color = "#1b5e20";
+    feedback.textContent = `Limite atualizado para ${bookLimit} livro(s) por leitor.`;
+  });
+
   document.getElementById("scheduleForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const selectedBookId = parseInt(document.getElementById("bookSelect").value);
@@ -816,6 +859,18 @@
     const book = books.find(b => b.id === selectedBookId);
 
     if (book && userName) {
+      const emprestadosComEssePleitor = books.filter(
+        b => b.status === "reading" && b.reader && b.reader.trim().toLowerCase() === userName.toLowerCase()
+      ).length;
+
+      if (emprestadosComEssePleitor >= bookLimit) {
+        feedback.style.color = "#b71c1c";
+        feedback.textContent = bookLimit === 1
+          ? `${userName} já está com um livro emprestado. Devolva o livro atual antes de agendar outro.`
+          : `${userName} já atingiu o limite de ${bookLimit} livros emprestados ao mesmo tempo.`;
+        return;
+      }
+
       book.status = "reading";
       book.reader = userName;
       // Data de entrega sugerida automaticamente (14 dias) — a bibliotecária
@@ -836,6 +891,7 @@
   });
 
   document.getElementById("filtroGenero").addEventListener("change", renderDisponiveis);
+  document.getElementById("buscaTitulo").addEventListener("input", renderDisponiveis);
 
   // Contato: envio via EmailJS, com escolha da bibliotecária destinatária
   document.getElementById("contactForm").addEventListener("submit", async (e) => {
@@ -896,4 +952,5 @@
 
   loadData();
 </script>
-</body></html>
+</body>
+</html>
