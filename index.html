@@ -1,4 +1,4 @@
-<html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -776,6 +776,8 @@
     await saveData();
     renderLists();
   }
+
+  // Ícone escondido que abre a área da bibliotecária
   document.getElementById("trigger").addEventListener("click", () => {
     if (isAdminLoggedIn) {
       const painel = document.getElementById("painelAdmin");
@@ -952,5 +954,4 @@
 
   loadData();
 </script>
-</body>
-</html>
+</body></html>
