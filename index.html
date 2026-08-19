@@ -302,7 +302,6 @@
   <!-- Navegação principal -->
   <div class="abas">
     <button type="button" class="aba-btn ativa" id="abaInicioBtn">Início</button>
-    <button type="button" class="aba-btn" id="abaAgendarBtn">Agendar</button>
     <button type="button" class="aba-btn" id="abaLendoBtn">Emprestados</button>
     <button type="button" class="aba-btn" id="abaAtrasadosBtn" style="display:none;">Atrasados</button>
     <button type="button" class="aba-btn" id="abaContatoBtn">Contato</button>
@@ -317,22 +316,6 @@
       <label for="filtroGenero">Filtrar por gênero:</label>
       <select id="filtroGenero" class="filtro-genero"></select>
       <div id="availableBooksContainer" style="margin-top:12px;"></div>
-    </section>
-  </div>
-
-  <div id="abaAgendar" class="conteudo-aba">
-    <section>
-      <h2>Agendar Livro para Leitura</h2>
-      <form id="scheduleForm">
-        <label for="bookSelect">Escolha um livro disponível:</label>
-        <select id="bookSelect" required></select>
-
-        <label for="userName">Seu nome:</label>
-        <input type="text" id="userName" required />
-
-        <button type="submit">Agendar Leitura</button>
-      </form>
-      <p id="scheduleFeedback"></p>
     </section>
   </div>
 
@@ -471,7 +454,6 @@
 
   // ---- Abas ----
   document.getElementById("abaInicioBtn").addEventListener("click", () => trocarAba("abaInicio", "abaInicioBtn"));
-  document.getElementById("abaAgendarBtn").addEventListener("click", () => trocarAba("abaAgendar", "abaAgendarBtn"));
   document.getElementById("abaLendoBtn").addEventListener("click", () => trocarAba("abaLendo", "abaLendoBtn"));
   document.getElementById("abaAtrasadosBtn").addEventListener("click", () => trocarAba("abaAtrasados", "abaAtrasadosBtn"));
   document.getElementById("abaContatoBtn").addEventListener("click", () => trocarAba("abaContato", "abaContatoBtn"));
@@ -526,7 +508,6 @@
     renderDisponiveis();
     renderEmprestados();
     renderAtrasados();
-    renderBookSelectAgendar();
   }
 
   function renderDisponiveis() {
@@ -581,6 +562,12 @@
     const acoes = document.createElement("div");
     acoes.className = "acoes";
 
+    const agendarBtn = document.createElement("button");
+    agendarBtn.className = "btn-confirmar";
+    agendarBtn.textContent = "Agendar";
+    agendarBtn.onclick = () => agendarLivro(book.id);
+    acoes.appendChild(agendarBtn);
+
     if (isAdminLoggedIn) {
       const editBtn = document.createElement("button");
       editBtn.className = "btn-secundario";
@@ -599,24 +586,34 @@
     return li;
   }
 
-  function renderBookSelectAgendar() {
-    const bookSelect = document.getElementById("bookSelect");
-    bookSelect.innerHTML = "";
-    const disponiveis = books.filter(b => b.status === "available");
+  async function agendarLivro(id) {
+    const book = books.find(b => b.id === id);
+    if (!book) return;
 
-    disponiveis.forEach(book => {
-      const option = document.createElement("option");
-      option.value = book.id;
-      option.textContent = `${book.title} (${book.genero || "Outro"})`;
-      bookSelect.appendChild(option);
-    });
+    const nomeDigitado = prompt(`Digite seu nome para agendar "${book.title}":`);
+    if (!nomeDigitado || !nomeDigitado.trim()) return;
+    const nome = nomeDigitado.trim();
 
-    if (bookSelect.options.length === 0) {
-      const option = document.createElement("option");
-      option.textContent = "Nenhum livro disponível";
-      option.disabled = true;
-      bookSelect.appendChild(option);
+    const emprestadosComEssePleitor = books.filter(
+      b => b.status === "reading" && b.reader && b.reader.trim().toLowerCase() === nome.toLowerCase()
+    ).length;
+
+    if (emprestadosComEssePleitor >= bookLimit) {
+      alert(bookLimit === 1
+        ? `${nome} já está com um livro emprestado. Devolva o livro atual antes de agendar outro.`
+        : `${nome} já atingiu o limite de ${bookLimit} livros emprestados ao mesmo tempo.`);
+      return;
     }
+
+    book.status = "reading";
+    book.reader = nome;
+    const sugestao = new Date();
+    sugestao.setDate(sugestao.getDate() + 14);
+    book.dataEntrega = sugestao.toISOString().split("T")[0];
+
+    await saveData();
+    renderLists();
+    alert(`Livro "${book.title}" agendado para ${nome} com sucesso. Devolução prevista: ${formatarData(book.dataEntrega)}.`);
   }
 
   function renderEmprestados() {
@@ -852,45 +849,6 @@
     feedback.textContent = `Limite atualizado para ${bookLimit} livro(s) por leitor.`;
   });
 
-  document.getElementById("scheduleForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const selectedBookId = parseInt(document.getElementById("bookSelect").value);
-    const userName = document.getElementById("userName").value.trim();
-    const feedback = document.getElementById("scheduleFeedback");
-    const book = books.find(b => b.id === selectedBookId);
-
-    if (book && userName) {
-      const emprestadosComEssePleitor = books.filter(
-        b => b.status === "reading" && b.reader && b.reader.trim().toLowerCase() === userName.toLowerCase()
-      ).length;
-
-      if (emprestadosComEssePleitor >= bookLimit) {
-        feedback.style.color = "#b71c1c";
-        feedback.textContent = bookLimit === 1
-          ? `${userName} já está com um livro emprestado. Devolva o livro atual antes de agendar outro.`
-          : `${userName} já atingiu o limite de ${bookLimit} livros emprestados ao mesmo tempo.`;
-        return;
-      }
-
-      book.status = "reading";
-      book.reader = userName;
-      // Data de entrega sugerida automaticamente (14 dias) — a bibliotecária
-      // pode ajustar depois na aba "Emprestados".
-      const sugestao = new Date();
-      sugestao.setDate(sugestao.getDate() + 14);
-      book.dataEntrega = sugestao.toISOString().split("T")[0];
-
-      await saveData();
-      renderLists();
-      e.target.reset();
-      feedback.style.color = "#1565c0";
-      feedback.textContent = `Livro "${book.title}" agendado para ${userName} com sucesso. Devolução prevista: ${formatarData(book.dataEntrega)}.`;
-    } else {
-      feedback.style.color = "#b71c1c";
-      feedback.textContent = "Selecione um livro e informe seu nome.";
-    }
-  });
-
   document.getElementById("filtroGenero").addEventListener("change", renderDisponiveis);
   document.getElementById("buscaTitulo").addEventListener("input", renderDisponiveis);
 
@@ -953,4 +911,5 @@
 
   loadData();
 </script>
-</body></html>
+</body>
+</html>
