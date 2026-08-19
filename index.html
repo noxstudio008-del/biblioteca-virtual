@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -186,6 +187,40 @@
       margin-top: 0;
       flex: 1;
       min-width: 140px;
+    }
+    li.item-disponivel {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .linha-principal {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+    }
+    .agendar-inline {
+      display: none;
+      width: 100%;
+      margin-top: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .agendar-inline.aberto {
+      display: flex;
+    }
+    .agendar-inline input {
+      margin-top: 0;
+      flex: 1;
+      min-width: 140px;
+    }
+    .agendar-inline button {
+      width: auto;
+      margin-top: 0;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 999px;
     }
 
     /* Navegação em abas */
@@ -555,9 +590,14 @@
 
   function criarItemDisponivel(book) {
     const li = document.createElement("li");
+    li.className = "item-disponivel";
+
+    const linhaPrincipal = document.createElement("div");
+    linhaPrincipal.className = "linha-principal";
+
     const span = document.createElement("span");
     span.textContent = book.title;
-    li.appendChild(span);
+    linhaPrincipal.appendChild(span);
 
     const acoes = document.createElement("div");
     acoes.className = "acoes";
@@ -565,7 +605,6 @@
     const agendarBtn = document.createElement("button");
     agendarBtn.className = "btn-confirmar";
     agendarBtn.textContent = "Agendar";
-    agendarBtn.onclick = () => agendarLivro(book.id);
     acoes.appendChild(agendarBtn);
 
     if (isAdminLoggedIn) {
@@ -582,16 +621,59 @@
       acoes.appendChild(editBtn);
       acoes.appendChild(delBtn);
     }
-    li.appendChild(acoes);
+    linhaPrincipal.appendChild(acoes);
+    li.appendChild(linhaPrincipal);
+
+    // Campinho que aparece dentro do próprio item ao clicar em "Agendar"
+    const formInline = document.createElement("div");
+    formInline.className = "agendar-inline";
+
+    const nomeInput = document.createElement("input");
+    nomeInput.type = "text";
+    nomeInput.placeholder = "Seu nome";
+
+    const confirmarBtn = document.createElement("button");
+    confirmarBtn.className = "btn-confirmar";
+    confirmarBtn.textContent = "Confirmar";
+
+    const cancelarBtn = document.createElement("button");
+    cancelarBtn.className = "btn-secundario";
+    cancelarBtn.textContent = "Cancelar";
+
+    formInline.appendChild(nomeInput);
+    formInline.appendChild(confirmarBtn);
+    formInline.appendChild(cancelarBtn);
+    li.appendChild(formInline);
+
+    agendarBtn.onclick = () => {
+      formInline.classList.toggle("aberto");
+      if (formInline.classList.contains("aberto")) nomeInput.focus();
+    };
+
+    cancelarBtn.onclick = () => {
+      formInline.classList.remove("aberto");
+      nomeInput.value = "";
+    };
+
+    confirmarBtn.onclick = () => agendarLivro(book.id, nomeInput.value);
+    nomeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        agendarLivro(book.id, nomeInput.value);
+      }
+    });
+
     return li;
   }
 
-  async function agendarLivro(id) {
+  async function agendarLivro(id, nomeDigitado) {
     const book = books.find(b => b.id === id);
     if (!book) return;
 
-    const nomeDigitado = prompt(`Digite seu nome para agendar "${book.title}":`);
-    if (!nomeDigitado || !nomeDigitado.trim()) return;
+    if (!nomeDigitado || !nomeDigitado.trim()) {
+      alert("Digite seu nome para agendar.");
+      return;
+    }
     const nome = nomeDigitado.trim();
 
     const emprestadosComEssePleitor = books.filter(
@@ -911,5 +993,4 @@
 
   loadData();
 </script>
-</body>
-</html>
+</body></html>
